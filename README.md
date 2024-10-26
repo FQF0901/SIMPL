@@ -45,16 +45,16 @@ which is accepted for publication in the IEEE Robotics and Automation Letters (R
 ### Install dependencies
 - Create a new conda virtual env
 ```
-conda create --name simpl python=3.8
+conda create --name simpl python=3.8【3.10】
 conda activate simpl
 ```
 
 - Install PyTorch according to your CUDA version. We recommend CUDA >= 11.1, PyTorch >= 1.8.0.
 ```
-conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.6 -c pytorch -c conda-forge
+conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.6 -c pytorch -c conda-forge【去除版本号和channel】
 ```
 
-- Install Argoverse 1 & 2 APIs, please follow [argoverse-api](https://github.com/argoai/argoverse-api) and [av2-api](https://argoverse.github.io/user-guide/getting_started.html).
+- Install Argoverse 1 & 2 APIs, please follow [argoverse-api](https://github.com/argoai/argoverse-api) and [av2-api](https://argoverse.github.io/user-guide/getting_started.html).【只按照步骤安装av1-api即可，av2-api通过conda install 安装，然后下载两者数据集】
 
 
 - Install other dependencies
