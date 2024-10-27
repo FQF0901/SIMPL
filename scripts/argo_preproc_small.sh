@@ -1,3 +1,4 @@
+# ~：代表当前用户的主目录。
 echo "-- Processing val set..."
 python data_argo/run_preprocess.py --mode val \
   --data_dir ~/data/dataset/argo_motion_forecasting/val/data/ \

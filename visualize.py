@@ -38,27 +38,38 @@ def parse_arguments() -> Any:
 
 
 def main():
+    """
+    主函数，负责根据命令行参数执行模型的加载、训练、验证或测试。
+    """
+    # 解析命令行参数
     args = parse_arguments()
     print('Args: {}\n'.format(args))
 
+    # 根据参数选择使用CPU还是GPU
     if args.use_cuda and torch.cuda.is_available():
         device = torch.device("cuda", 0)
     else:
         device = torch.device('cpu')
 
+    # 生成当前日期和时间的字符串，用于日志等
     date_str = datetime.now().strftime("%Y%m%d-%H%M%S")
 
+    # 解析可视化工具的参数，并加载相应的可视化模块
     vis_file, vis_name = args.visualizer.split(':')
     print('[Loader] load visualizer {} from {}'.format(vis_name, vis_file))
     vis = getattr(import_module(vis_file), vis_name)()
 
+    # 根据参数选择不同的执行模式：训练、验证或测试
     if args.mode != 'test':
+        # 初始化数据加载器
         loader = Loader(args, device, is_ddp=False)
+        # 加载模型和数据集
         print('[Resume] Loading state_dict from {}'.format(args.model_path))
         loader.set_resmue(args.model_path)
         (train_set, val_set), net, _, _, evaluator = loader.load()
         net.eval()
 
+        # 根据模式选择数据集
         if args.mode == 'train':
             dataloader = DataLoader(train_set,
                                     batch_size=1,
@@ -74,13 +85,14 @@ def main():
                                     collate_fn=val_set.collate_fn,
                                     drop_last=False)
 
+        # 对数据集进行评估
         with torch.no_grad():
             for i, data in enumerate(tqdm(dataloader)):
                 if args.seq_id == -1:
                     data_in = net.pre_process(data)
                     out = net(data_in)
                     post_out = net.post_process(out)
-                    torch.cuda.synchronize()
+                    torch.cuda.synchronize()    # # 等待所有CUDA操作完成，确保结果的正确性
 
                     eval_out = evaluator.evaluate(post_out, data)
 
@@ -112,7 +124,7 @@ def main():
                         break
 
     else:
-        # test
+        # 测试模式
         loader = Loader(args, device, is_ddp=False)
         print('[Resume] Loading state_dict from {}'.format(args.model_path))
         loader.set_resmue(args.model_path)
