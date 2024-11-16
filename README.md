@@ -54,12 +54,12 @@ conda activate simpl
 conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=11.6 -c pytorch -c conda-forge【去除版本号和channel】
 ```
 
-- Install Argoverse 1 & 2 APIs, please follow [argoverse-api](https://github.com/argoai/argoverse-api) and [av2-api](https://argoverse.github.io/user-guide/getting_started.html).【只按照步骤安装av1-api即可，av2-api通过conda install 安装，然后下载两者数据集】
+- Install Argoverse 1 & 2 APIs, please follow [argoverse-api](https://github.com/argoai/argoverse-api) and [av2-api](https://argoverse.github.io/user-guide/getting_started.html).【只按照步骤安装av1-api即可(av_git放在任意位置即可，但可能需要pip降级：pip install pip==24.0；且要补充安装cmake和lapsolver，其余改动上传av_git)，av2-api通过conda install 安装，然后下载两者数据集】
 
 
 - Install other dependencies
 ```
-pip install scikit-image IPython tqdm ipdb tensorboard
+pip install scikit-image IPython tqdm ipdb tensorboard 【--index-url https://pypi.tuna.tsinghua.edu.cn/simple】
 ```
 
 ### Play with pretrained models (Argoverse 1)
