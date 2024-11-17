@@ -4,6 +4,40 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        // argo_preproc_small.sh
+        {
+            "name": "Python Debugger: Run Preprocess Val",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/data_argo/run_preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mode", "val",
+                "--data_dir", "~/data/dataset/argo_motion_forecasting/val/data/",
+                "--save_dir", "data_argo/features/",
+                "--small"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        {
+            "name": "Python Debugger: Run Preprocess Train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/data_argo/run_preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mode", "train",
+                "--data_dir", "~/data/dataset/argo_motion_forecasting/train/data/",
+                "--save_dir", "data_argo/features/",
+                "--small"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        // simpl_av1_vis.sh
         {
             "name": "Python Debugger: Simpl AV1 Vis",
             "type": "debugpy",
