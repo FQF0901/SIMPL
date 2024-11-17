@@ -67,7 +67,7 @@ def main():
         print('[Resume] Loading state_dict from {}'.format(args.model_path))
         loader.set_resmue(args.model_path)
         (train_set, val_set), net, _, _, evaluator = loader.load()
-        net.eval()
+        net.eval()  # 将模型的一些层（如 Dropout 层和 BatchNorm 层）的行为从训练模式切换到评估模式
 
         # 根据模式选择数据集
         if args.mode == 'train':
