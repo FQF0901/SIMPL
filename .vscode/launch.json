@@ -6,7 +6,7 @@
     "configurations": [
         // argo_preproc_small.sh
         {
-            "name": "Python Debugger: Run Preprocess Val",
+            "name": "Python Debugger: Run Preprocess AV1 Val",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/data_argo/run_preprocess.py",
@@ -23,7 +23,7 @@
         },
         
         {
-            "name": "Python Debugger: Run Preprocess Train",
+            "name": "Python Debugger: Run Preprocess AV1 Train",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/data_argo/run_preprocess.py",
@@ -39,7 +39,28 @@
             }
         },
         
-        // simpl_av1_vis.sh
+        {
+            "name": "Python Debugger: Simpl AV1 Train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--features_dir", "data_argo/features/",
+                "--train_batch_size", "4",
+                "--val_batch_size", "4",
+                "--val_interval", "2",
+                "--train_epoches", "30",
+                "--data_aug",
+                "--use_cuda",
+                "--logger_writer",
+                "--adv_cfg_path", "config.simpl_cfg"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+        },
+
         {
             "name": "Python Debugger: Simpl AV1 Vis",
             "type": "debugpy",
@@ -53,6 +74,83 @@
                 "--model_path", "saved_models/simpl_av1_ckpt.tar",
                 "--adv_cfg_path", "config.simpl_cfg",
                 "--visualizer", "simpl.av1_visualizer:Visualizer",
+                "--seq_id", "-1"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+        },
+
+        // av2_preproc_small.sh
+        {
+            "name": "Python Debugger: Run Preprocess AV2 Val",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/data_av2/run_preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mode", "val",
+                "--data_dir", "~/data/dataset/argoverse2/val/",
+                "--save_dir", "data_av2/features/",
+                "--small"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        
+        {
+            "name": "Python Debugger: Run Preprocess AV2 Train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/data_av2/run_preprocess.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mode", "train",
+                "--data_dir", "~/data/dataset/argoverse2/train/",
+                "--save_dir", "data_av2/features/",
+                "--small"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            }
+        },
+        
+        {
+            "name": "Python Debugger: Simpl AV2 Train",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--features_dir", "data_av2/features/",
+                "--train_batch_size", "4",
+                "--val_batch_size", "4",
+                "--val_interval", "2",
+                "--train_epoches", "10",
+                "--data_aug",
+                "--use_cuda",
+                "--logger_writer",
+                "--adv_cfg_path", "config.simpl_av2_cfg"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+        },
+        
+        {
+            "name": "Python Debugger: Simpl AV2 Vis",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/visualize.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--features_dir", "data_av2/features/",
+                "--mode", "val",
+                "--use_cuda",
+                "--model_path", "saved_models/simpl_av2_bezier_ckpt.tar",
+                "--adv_cfg_path", "config.simpl_av2_cfg",
+                "--visualizer", "simpl.av2_visualizer:Visualizer",
                 "--seq_id", "-1"
             ],
             "env": {
