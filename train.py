@@ -10,10 +10,10 @@ from tqdm import tqdm
 #
 import torch
 import torch.multiprocessing
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader # py stl
 #
-from loader import Loader
-from utils.logger import Logger
+from loader import Loader   # 自己写的函数
+from utils.logger import Logger # 自己写的函数，主要是对SummaryWriter的封装
 from utils.utils import AverageMeterForDict
 from utils.utils import save_ckpt, set_seed
 
@@ -46,7 +46,7 @@ def parse_arguments() -> Any:
 def main():
     args = parse_arguments()
 
-    faulthandler.enable()
+    faulthandler.enable()   # 启用 Python 的 faulthandler 模块。该模块用于在 Python 程序崩溃时（例如发生段错误或非法指令），自动打印出当前的栈跟踪信息
     start_time = time.time()
     set_seed(args.seed)
 
@@ -57,23 +57,41 @@ def main():
 
     date_str = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = "log/" + date_str
-    logger = Logger(date_str=date_str, log_dir=log_dir, enable_flags={'writer': args.logger_writer})
+    logger = Logger(date_str=date_str, log_dir=log_dir, enable_flags={'writer': args.logger_writer})    # 自己写的函数，主要是对SummaryWriter的封装
     # log basic info
     logger.log_basics(args=args, datetime=date_str)
 
-    loader = Loader(args, device, is_ddp=False)
+    loader = Loader(args, device, is_ddp=False) # 自己写的函数
     if args.resume:
         logger.print('[Resume] Loading state_dict from {}'.format(args.model_path))
         loader.set_resmue(args.model_path)
     (train_set, val_set), net, loss_fn, optimizer, evaluator = loader.load()
 
+
+    # torch.utils.data.DataLoader(
+    #     dataset,  # 数据集，实现了 __getitem__() 和 __len__() 方法的数据集对象。
+    #     batch_size=1,  # 每个batch的样本数，默认是1。
+    #     shuffle=False,  # 是否在每个epoch开始时打乱数据顺序，默认不打乱。
+    #     sampler=None,  # 自定义从数据集中抽取样本的方法，如果指定了sampler，则shuffle必须为False。
+    #     batch_sampler=None,  # 自定义batch的抽样方法，如果指定了这个参数，则不能指定batch_size, shuffle, sampler和drop_last。
+    #     num_workers=0,  # 使用多少个子进程来加载数据，默认是0，表示在主进程中加载。
+    #     collate_fn=None,  # 合并样本列表成mini-batch的函数，默认是将样本堆叠起来。
+    #     pin_memory=False,  # 如果True，则会将数据加载到pinned memory中，这样可以加速从CPU向GPU的传输。
+    #     drop_last=False,  # 如果数据集大小不能被batch size整除，是否丢弃最后一个不完整的batch，默认不丢弃。
+    #     timeout=0,  # 如果使用了num_workers>0，此参数用于设置获取下一个batch的最大等待时间，默认是0，表示无限制。
+    #     worker_init_fn=None,  # 如果不是None，将在每个worker初始化时调用此函数。
+    #     multiprocessing_context=None,  # 设置多进程上下文环境。
+    #     generator=None,  # 用于随机数生成的torch.Generator对象。
+    #     prefetch_factor=2,  # 每个worker预先加载的数据量，默认值为2。
+    #     persistent_workers=False,  # 如果为True， DataLoader的子进程在迭代结束时不销毁，这可以在多个epoch间减少启动开销。
+    # )
     dl_train = DataLoader(train_set,
                           batch_size=args.train_batch_size,
                           shuffle=True,
                           num_workers=8,
                           collate_fn=train_set.collate_fn,
                           drop_last=True,
-                          pin_memory=True)
+                          pin_memory=True)  # py stl
     dl_val = DataLoader(val_set,
                         batch_size=args.val_batch_size,
                         shuffle=False,
