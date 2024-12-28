@@ -102,19 +102,22 @@ def main():
 
     niter = 0
     best_metric = 1e6
-    rank_metric = args.rank_metric
+    rank_metric = args.rank_metric  # 从命令行参数中获取用于评估模型性能的排名指标，并将其赋值给变量 rank_metric。这个指标将在后续的验证过程中用于比较和保存最佳模型
     net_name = loader.network_name()
 
     for epoch in range(args.train_epoches):
         logger.print('\nEpoch {}'.format(epoch))
-        torch.cuda.empty_cache()
-        torch.cuda.reset_peak_memory_stats()
+        torch.cuda.empty_cache()    # 释放未被占用但不可用的缓存内存
+        torch.cuda.reset_peak_memory_stats()    # 重置当前设备的峰值内存使用统计信息，方便后续监控和调试
 
         # * Train
         epoch_start = time.time()
-        train_loss_meter = AverageMeterForDict()
+        train_loss_meter = AverageMeterForDict()    # train_loss_meter用于跟踪训练过程中每个批次的损失值，在训练循环中，train_loss_meter 用于累积和更新每个批次的损失值
         train_eval_meter = AverageMeterForDict()
-        net.train()
+        net.train() # 更改net mode：启用梯度计算、激活 Dropout 和 BatchNorm 层
+
+        # 1. 遍历数据：通过 enumerate 函数获取每个批次的数据及其索引。
+        # 2. 进度条显示：使用 tqdm 库显示进度条，控制台会实时更新训练进度。disable=args.no_pbar 控制是否显示进度条，ncols=80 设置进度条宽度为80个字符。
         for i, data in enumerate(tqdm(dl_train, disable=args.no_pbar, ncols=80)):
             data_in = net.pre_process(data)
             out = net(data_in)

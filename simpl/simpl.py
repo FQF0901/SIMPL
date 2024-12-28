@@ -591,14 +591,25 @@ class Simpl(nn.Module):
             self.apply(init_weights)
 
     def forward(self, data):
+        # actors: [108， 14， 48]。这个108是变化的actor数量，14是actor的feature数量，48是actor的obs长度
+        # actor_idcs: 4组(args.train_batch_size)，0~20， 21~39， 40~65， 66~107。共108个actor
+        # lanes: [256, 10, 16]。这个256是变化的lane数量，10是lane的feature数量，16是lane的obs长度
+        # lane_idcs: 4组(args.train_batch_size), 0~109, 110~172, 173~198, 199~255。共256个lane
+        # rpe: 4组(args.train_batch_size)，[5, 131, 131], [5, 82, 82], [5, 52, 52], [5, 99, 99]。actors和lanes的全连接GNN
         actors, actor_idcs, lanes, lane_idcs, rpe = data
 
         # * actors/lanes encoding
-        actors = self.actor_net(actors)  # output: [N_{actor}, 128]
-        lanes = self.lane_net(lanes)  # output: [N_{lane}, 128]
+        actors = self.actor_net(actors)  # output: [N_{actor}, 128]，也就是[108, 128]
+        lanes = self.lane_net(lanes)  # output: [N_{lane}, 128]，也就是[256, 128]
+        
         # * fusion
-        actors, lanes, _ = self.fusion_net(actors, actor_idcs, lanes, lane_idcs, rpe)
+        actors, lanes, _ = self.fusion_net(actors, actor_idcs, lanes, lane_idcs, rpe)   # output: actors:[108, 128], lanes[256, 128]
+
         # * decoding
+        # 3组数据，分别是res_cls, res_reg, res_aux
+        # res_cls有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod]：[21, 6], [19, 6], [26, 6], [42, 6]
+        # res_reg有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod, pred_len, 2]: [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
+        # res_aux有4组(args.train_batch_size)数据...
         out = self.pred_net(actors, actor_idcs)
 
         return out

@@ -182,15 +182,31 @@ def init_weights(m: nn.Module) -> None:
 
 
 class AverageMeter(object):
+    """
+    用于跟踪数值的平均值、总和和计数。
+    """
     def __init__(self):
+        """
+        初始化类，调用 reset 方法重置参数。
+        """
         self.reset()
 
     def reset(self):
+        """
+        将平均值、总和和计数重置为初始状态。
+        """
         self.avg = 0
         self.sum = 0
         self.count = 0
 
     def update(self, val, n=1):
+        """
+        使用新值更新总和和计数，并重新计算平均值。
+
+        参数:
+        - val: 要添加的新值，可以是数字或 PyTorch 张量。
+        - n: 新值出现的次数，默认为 1。
+        """
         if isinstance(val, torch.Tensor):
             val = val.detach().cpu().item()
         self.sum += val * n
@@ -199,13 +215,29 @@ class AverageMeter(object):
 
 
 class AverageMeterForDict(object):
+    """
+    用于跟踪字典形式的多个指标的平均值。
+    """
     def __init__(self):
-        self.reset()       # __init__():reset parameters
+        """
+        初始化类，调用 reset 方法重置参数。
+        """
+        self.reset()
 
     def reset(self):
+        """
+        将 metrics 字典重置为空。
+        """
         self.metrics = {}
 
     def update(self, elem, n=1):
+        """
+        使用新值更新字典，如果键不存在则创建新的 AverageMeter 实例。
+
+        参数:
+        - elem: 包含指标名称和值的字典。
+        - n: 新值出现的次数，默认为 1。
+        """
         for key, val in elem.items():
             if not key in self.metrics:
                 self.metrics[key] = AverageMeter()
@@ -213,12 +245,21 @@ class AverageMeterForDict(object):
             self.metrics[key].update(val, n)
 
     def get_info(self):
+        """
+        获取当前所有指标的平均值并格式化为字符串。
+
+        返回:
+        - info: 包含所有指标平均值的格式化字符串。
+        """
         info = ''
         for key, elem in self.metrics.items():
             info += "{}: {:.3f} ".format(key, elem.avg)
         return info
 
     def print(self):
+        """
+        打印包含当前所有指标平均值的格式化字符串。
+        """
         info = self.get_info()
         print('-- ' + info)
 
