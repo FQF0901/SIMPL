@@ -119,8 +119,22 @@ def main():
         # 1. 遍历数据：通过 enumerate 函数获取每个批次的数据及其索引。
         # 2. 进度条显示：使用 tqdm 库显示进度条，控制台会实时更新训练进度。disable=args.no_pbar 控制是否显示进度条，ncols=80 设置进度条宽度为80个字符。
         for i, data in enumerate(tqdm(dl_train, disable=args.no_pbar, ncols=80)):
+            
+            # data_in如下：
+            # actors: [108， 14， 48]。这个108是变化的actor数量，14是actor的feature数量，48是actor的obs长度
+            # actor_idcs: 4组(args.train_batch_size)，0~20， 21~39， 40~65， 66~107。共108个actor
+            # lanes: [256, 10, 16]。这个256是变化的lane数量，10是lane的feature数量，16是lane的obs长度
+            # lane_idcs: 4组(args.train_batch_size), 0~109, 110~172, 173~198, 199~255。共256个lane
+            # rpe: 4组(args.train_batch_size)，[5, 131, 131], [5, 82, 82], [5, 52, 52], [5, 99, 99]。actors和lanes的全连接GNN
             data_in = net.pre_process(data)
+
+            # out如下：
+            # 3组数据，分别是res_cls, res_reg, res_aux
+            # res_cls有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod]：[21, 6], [19, 6], [26, 6], [42, 6]
+            # res_reg有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod, pred_len, 2]: [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
+            # res_aux有4组(args.train_batch_size)数据...
             out = net(data_in)
+
             loss_out = loss_fn(out, data)
 
             post_out = net.post_process(out)

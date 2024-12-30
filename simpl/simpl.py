@@ -127,20 +127,20 @@ class ActorNet(nn.Module):
         self.output = Res1d(hidden_size, hidden_size, norm=norm, ng=ng)
 
     def forward(self, actors: Tensor) -> Tensor:
-        out = actors
+        out = actors    # [108, 14, 48]
 
         outputs = []
         for i in range(len(self.groups)):
             out = self.groups[i](out)
             outputs.append(out)
 
-        out = self.lateral[-1](outputs[-1])
+        out = self.lateral[-1](outputs[-1]) # [108, 128, 6]
         for i in range(len(outputs) - 2, -1, -1):
             out = F.interpolate(out, scale_factor=2, mode="linear", align_corners=False)
             out += self.lateral[i](outputs[i])
 
-        out = self.output(out)[:, :, -1]
-        return out
+        out = self.output(out)[:, :, -1]    # [108, 128]
+        return out  # [108, 128]
 
 
 class PointAggregateBlock(nn.Module):
@@ -194,11 +194,11 @@ class LaneNet(nn.Module):
         self.aggre1 = PointAggregateBlock(hidden_size=hidden_size, aggre_out=False, dropout=dropout)
         self.aggre2 = PointAggregateBlock(hidden_size=hidden_size, aggre_out=True, dropout=dropout)
 
-    def forward(self, feats):
-        x = self.proj(feats)  # [N_{lane}, 10, hidden_size]
-        x = self.aggre1(x)
-        x = self.aggre2(x)  # [N_{lane}, hidden_size]
-        return x
+    def forward(self, feats):   # [256, 10, 16]
+        x = self.proj(feats)  # [N_{lane}, 10, hidden_size], [256, 10, 128]
+        x = self.aggre1(x)  # [256, 10, 128]
+        x = self.aggre2(x)  # [N_{lane}, hidden_size], [256, 128]
+        return x    # [256, 128]
 
 
 class SftLayer(nn.Module):
@@ -338,15 +338,15 @@ class SymmetricFusionTransformer(nn.Module):
 
     def forward(self, x: Tensor, edge: Tensor, edge_mask: Tensor) -> Tensor:
         '''
-            x: (N, d_model)
-            edge: (d_model, N, N)
+            x: (N, d_model), [131, 128]
+            edge: (d_model, N, N), [131, 131, 128]
             edge_mask: (N, N)
         '''
         # attn_multilayer = []
         for mod in self.fusion:
             x, edge, _ = mod(x, edge, edge_mask)
             # attn_multilayer.append(attn)
-        return x, None
+        return x, None  # [131, 128]
 
 
 class FusionNet(nn.Module):
@@ -394,17 +394,17 @@ class FusionNet(nn.Module):
         # print('lane_idcs: ', [x.shape for x in lane_idcs])
 
         # projection
-        actors = self.proj_actor(actors)
-        lanes = self.proj_lane(lanes)
+        actors = self.proj_actor(actors)    # [108, 128] -> [108, 128]
+        lanes = self.proj_lane(lanes)   # [256, 128] -> [256, 128]
 
         actors_new, lanes_new = list(), list()
-        for a_idcs, l_idcs, rpes in zip(actor_idcs, lane_idcs, rpe_prep):
+        for a_idcs, l_idcs, rpes in zip(actor_idcs, lane_idcs, rpe_prep):   # 一共4（batch_size）组，这里取第i组
             # * fusion - scene
-            _actors = actors[a_idcs]
-            _lanes = lanes[l_idcs]
-            tokens = torch.cat([_actors, _lanes], dim=0)  # (N, d_model)
-            rpe = self.proj_rpe_scene(rpes['scene'].permute(1, 2, 0))  # (N, N, d_rpe)
-            out, _ = self.fuse_scene(tokens, rpe, rpes['scene_mask'])
+            _actors = actors[a_idcs]    # _actors维度[21, 128], 第n组的actor特征
+            _lanes = lanes[l_idcs]  # _lanes维度[110, 128], 第n组的lane特征
+            tokens = torch.cat([_actors, _lanes], dim=0)  # (N, d_model), [131, 128]
+            rpe = self.proj_rpe_scene(rpes['scene'].permute(1, 2, 0))  # (N, N, d_rpe), rpes维度[5， 131， 131] -> rpe维度[131, 131, 128]
+            out, _ = self.fuse_scene(tokens, rpe, rpes['scene_mask'])   # [131, 128]
 
             actors_new.append(out[:len(a_idcs)])
             lanes_new.append(out[len(a_idcs):])
@@ -414,7 +414,7 @@ class FusionNet(nn.Module):
         lanes = torch.cat(lanes_new, dim=0)
         # print('actors: ', actors.shape)
         # print('lanes: ', lanes.shape)
-        return actors, lanes, None
+        return actors, lanes, None  # [108, 128], [256, 128], None
 
 
 class MLPDecoder(nn.Module):
@@ -624,11 +624,11 @@ class Simpl(nn.Module):
             'RPE',
             'ACTORS', 'ACTOR_IDCS', 'LANES', 'LANE_IDCS'
         '''
-        actors = gpu(data['ACTORS'], self.device)
-        actor_idcs = gpu(data['ACTOR_IDCS'], self.device)
-        lanes = gpu(data['LANES'], self.device)
-        lane_idcs = gpu(data['LANE_IDCS'], self.device)
-        rpe = gpu(data['RPE'], self.device)
+        actors = gpu(data['ACTORS'], self.device)   # [108, 14, 48]
+        actor_idcs = gpu(data['ACTOR_IDCS'], self.device)   # [0, 20], [21, 39], [40, 65], [66, 107]
+        lanes = gpu(data['LANES'], self.device) # [256, 10, 16]
+        lane_idcs = gpu(data['LANE_IDCS'], self.device) # [0, 109], [110, 172], [173, 198], [199, 255]
+        rpe = gpu(data['RPE'], self.device) # [5, 131, 131], [5, 82, 82], [5, 52, 52], [5, 99, 99]
 
         return actors, actor_idcs, lanes, lane_idcs, rpe
 

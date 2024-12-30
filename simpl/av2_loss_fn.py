@@ -22,21 +22,38 @@ class LossFunc(nn.Module):  # 继承自 LossFunc 类
     def forward(self, out, data):
         """
         输入：
-            out: 模型输出，包含预测类别、预测位置、预测速度、预测方向角
-            data: 输入数据，包含真实位置、真实速度、真实方向角、预测位置、预测速度、预测方向角、预测位置掩码、预测方向角掩码
+            out: 3组数据，分别是res_cls, res_reg, res_aux
+                res_cls有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod]: [21, 6], [19, 6], [26, 6], [42, 6]
+                res_reg有4组(args.train_batch_size)数据，维度是[N_{actor}, n_mod, pred_len, 2]: [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
+                res_aux有4组(args.train_batch_size)数据...
+            data: 12个数据
+                BATCH_SIZE = 4
+                SEQ_ID: 4个，如'f8be58f6-cc75-40fa-956c-9536f9397392'等
+                CITY_NAME: 4个，如'washington-dc', 'pittsburgh'等
+                ORIG
+                ROT
+                TRAJS: TRAJS_POS_OBS, TRAJS_ANG_OBS, TRAJS_VEL_OBS, TRAJS_TYPE, PAD_OBS; 
+                        TRAJS_POS_FUT, TRAJS_ANG_FUT, TRAJS_VEL_FUT, PAD_FUT; 
+                        TRAJS_CTRS, TRAJS_VECS, TRAJS_TID, TRAJS_CAT, TRAIN_MASK, YAW_LOSS_MASK
+                LANE_GRAPH
+                RPE
+                ACTORS
+                ACTOR_IDCS
+                LANES
+                LANE_IDCS
         Algo:
             1. 首先提取未来轨迹、填充标志、分类、回归和辅助信息。
             2. 然后应用训练掩码以过滤无效样本。根据 yaw_loss 是否为真，选择调用 pred_loss_with_yaw 或 pred_loss 来计算损失，并最终返回总损失
         输出：
             loss_out: 损失函数输出，包含类别损失、位置损失、方向角损失、总损失
         """
-        traj_fut = [x['TRAJS_POS_FUT'] for x in data["TRAJS"]]  # 从数据中提取未来轨迹位置信息
-        traj_fut = gpu(traj_fut, device=self.device)    # 将数据转换到指定设备（CPU或GPU）
+        traj_fut = [x['TRAJS_POS_FUT'] for x in data["TRAJS"]]
+        traj_fut = gpu(traj_fut, device=self.device)    # [21, 60, 2], [19, 60, 2], [26, 60, 2], [42, 60, 2]
 
         # PAD_FUT 表示未来轨迹的填充标志。由于不同样本的未来轨迹长度可能不同，为了使所有样本具有相同的维度，通常会对较短的轨迹进行填充。
         # PAD_FUT 用于标识哪些时间步是填充的（即无效的），哪些是有效的。在计算损失时，可用于忽略填充的时间步，确保只对有效的时间步进行计算，从而避免引入不必要的误差
-        pad_fut = [x['PAD_FUT'] for x in data["TRAJS"]] # 从数据中提取未来轨迹的填充信息
-        pad_fut = to_long(gpu(pad_fut, device=self.device)) # 转换到指定设备（CPU或GPU），同时转换为long类型
+        pad_fut = [x['PAD_FUT'] for x in data["TRAJS"]]
+        pad_fut = to_long(gpu(pad_fut, device=self.device)) # [21, 60], [19, 60], [26, 60], [42, 60]
 
         cls, reg, aux = out # 解包模型输出，获取分类、回归和辅助任务的结果
 
@@ -52,15 +69,15 @@ class LossFunc(nn.Module):  # 继承自 LossFunc 类
 
         # TRAIN_MASK 是一个布尔掩码，用于标识哪些样本或时间步是用于训练的。
         # 这可能是基于某些条件生成的，例如某些样本可能被标记为验证或测试样本，或者某些时间步的数据可能是无效的（如缺失值或填充值）
-        train_mask = [x["TRAIN_MASK"] for x in data["TRAJS"]]   # 提取训练掩码
-        train_mask = gpu(train_mask, device=self.device)    # 将训练掩码转换到指定设备
+        train_mask = [x["TRAIN_MASK"] for x in data["TRAJS"]]
+        train_mask = gpu(train_mask, device=self.device)    # 貌似全true, [21], [19], [26], [42]
         # print('train_mask:', [x.shape for x in train_mask])
         # print('whitelist num: ', [x.sum().item() for x in train_mask])
 
-        cls = [x[train_mask[i]] for i, x in enumerate(cls)]
-        reg = [x[train_mask[i]] for i, x in enumerate(reg)]
-        traj_fut = [x[train_mask[i]] for i, x in enumerate(traj_fut)]
-        pad_fut = [x[train_mask[i]] for i, x in enumerate(pad_fut)]
+        cls = [x[train_mask[i]] for i, x in enumerate(cls)] # [21, 6], [19, 6], [26, 6], [42, 6]
+        reg = [x[train_mask[i]] for i, x in enumerate(reg)] # [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
+        traj_fut = [x[train_mask[i]] for i, x in enumerate(traj_fut)]   # [21, 60, 2], [19, 60, 2], [26, 60, 2], [42, 60, 2]
+        pad_fut = [x[train_mask[i]] for i, x in enumerate(pad_fut)] # [21, 60], [19, 60], [26, 60], [42, 60]
 
         # print('-- masked')
         # print('cls:', [x.shape for x in cls])
@@ -74,15 +91,15 @@ class LossFunc(nn.Module):  # 继承自 LossFunc 类
         if self.yaw_loss:
             # yaw angle GT
             ang_fut = [x['TRAJS_ANG_FUT'] for x in data["TRAJS"]]
-            ang_fut = gpu(ang_fut, device=self.device)
+            ang_fut = gpu(ang_fut, device=self.device)  # [21, 60, 2], [19, 60, 2], [26, 60, 2], [42, 60, 2]
             # for yaw loss
-            yaw_loss_mask = gpu([x["YAW_LOSS_MASK"] for x in data["TRAJS"]], device=self.device)
+            yaw_loss_mask = gpu([x["YAW_LOSS_MASK"] for x in data["TRAJS"]], device=self.device)    # [21], [19], [26], [42]
             # collect aux info
-            vel = [x[0] for x in aux]
+            vel = [x[0] for x in aux]   # [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
             # apply train mask
-            vel = [x[train_mask[i]] for i, x in enumerate(vel)]
-            ang_fut = [x[train_mask[i]] for i, x in enumerate(ang_fut)]
-            yaw_loss_mask = [x[train_mask[i]] for i, x in enumerate(yaw_loss_mask)]
+            vel = [x[train_mask[i]] for i, x in enumerate(vel)] # [21, 6, 60, 2], [19, 6, 60, 2], [26, 6, 60, 2], [42, 6, 60, 2]
+            ang_fut = [x[train_mask[i]] for i, x in enumerate(ang_fut)] # [21, 60, 2], [19, 60, 2], [26, 60, 2], [42, 60, 2]
+            yaw_loss_mask = [x[train_mask[i]] for i, x in enumerate(yaw_loss_mask)] # [21], [19], [26], [42]
 
             loss_out = self.pred_loss_with_yaw(cls, reg, vel, traj_fut, ang_fut, pad_fut, yaw_loss_mask)
             loss_out["loss"] = loss_out["cls_loss"] + loss_out["reg_loss"] + loss_out["yaw_loss"]
@@ -102,26 +119,26 @@ class LossFunc(nn.Module):  # 继承自 LossFunc 类
                            yaw_flags: List[torch.Tensor]):
         """
         带Yaw角度损失的预测损失：pred_loss_with_yaw，计算分类损失、回归损失和方向角损失。
-        1. 分类损失基于最小距离模式与其他模式之间的差异；
-        2. 回归损失基于预测轨迹与真实轨迹之间的差异；
-        3. 方向角损失基于预测速度方向与真实方向之间的余弦相似度
+        1. 分类损失：基于最小距离模式与其他模式之间的差异；
+        2. 回归损失：基于预测轨迹与真实轨迹之间的差异；
+        3. 方向角损失：基于预测速度方向与真实方向之间的余弦相似度
         """
         # 将输入的列表形式的张量拼接成一个大的张量，并指定维度0进行拼接
-        cls = torch.cat([x for x in cls], dim=0)                     # [98, 6]
-        reg = torch.cat([x for x in reg], dim=0)                     # [98, 6, 60, 2]
-        vel = torch.cat([x for x in vel], dim=0)                     # [98, 6, 60, 2]
-        gt_preds = torch.cat([x for x in gt_preds], dim=0)           # [98, 60, 2]
-        gt_ang = torch.cat([x for x in gt_ang], dim=0)               # [98, 60, 2]
-        has_preds = torch.cat([x for x in pad_flags], dim=0).bool()  # [98, 60]，表示哪些时间步是有效的（非填充）
-        has_yaw = torch.cat([x for x in yaw_flags], dim=0).bool()    # [98]，表示哪些样本需要计算方向角损失
+        cls = torch.cat([x for x in cls], dim=0)                     # [108, 6]，108是n_agents, 6是n_mod
+        reg = torch.cat([x for x in reg], dim=0)                     # [108, 6, 60, 2]，60是n_preds， 2是xy
+        vel = torch.cat([x for x in vel], dim=0)                     # [108, 6, 60, 2]，2是velocity_x/y
+        gt_preds = torch.cat([x for x in gt_preds], dim=0)           # [108, 60, 2]
+        gt_ang = torch.cat([x for x in gt_ang], dim=0)               # [108, 60, 2]
+        has_preds = torch.cat([x for x in pad_flags], dim=0).bool()  # [108, 60]，表示哪些时间步是有效的（非填充）
+        has_yaw = torch.cat([x for x in yaw_flags], dim=0).bool()    # [108]，表示哪些样本需要计算方向角损失
 
         loss_out = dict()  # 初始化一个字典来存储损失值
-        num_modes = self.config["g_num_modes"]  # 获取配置中的模式数量
-        num_preds = self.config["g_pred_len"]   # 获取配置中的预测步数
+        num_modes = self.config["g_num_modes"]  # 获取配置中的模式数量: 6
+        num_preds = self.config["g_pred_len"]   # 获取配置中的预测步数: 60
         # assert(has_preds.all())
 
         # 计算每个样本在预测序列中的最后一个有效时间步
-        last = has_preds.float() + 0.1 * torch.arange(num_preds).float().to(self.device) / float(num_preds)
+        last = has_preds.float() + 0.1 * torch.arange(num_preds).float().to(self.device) / float(num_preds) # [108, 60]
         max_last, last_idcs = last.max(1)  # 找到每个样本的最大有效时间步及其索引
         mask = max_last > 1.0  # 过滤掉没有足够有效时间步的样本
 
