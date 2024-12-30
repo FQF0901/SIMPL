@@ -139,8 +139,8 @@ class LossFunc(nn.Module):  # 继承自 LossFunc 类
 
         # 计算每个样本在预测序列中的最后一个有效时间步
         last = has_preds.float() + 0.1 * torch.arange(num_preds).float().to(self.device) / float(num_preds) # [108, 60]
-        max_last, last_idcs = last.max(1)  # 找到每个样本的最大有效时间步及其索引
-        mask = max_last > 1.0  # 过滤掉没有足够有效时间步的样本
+        max_last, last_idcs = last.max(1)  # 找到每个样本的最大有效时间步及其索引, [108], [108]
+        mask = max_last > 1.0  # 过滤掉没有足够有效时间步的样本，有true有false, [108]
 
         # 应用mask过滤无效样本
         cls = cls[mask]
