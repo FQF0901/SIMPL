@@ -92,7 +92,7 @@ def main():
                     data_in = net.pre_process(data)
                     out = net(data_in)
                     post_out = net.post_process(out)
-                    torch.cuda.synchronize()    # # 等待所有CUDA操作完成，确保结果的正确性
+                    torch.cuda.synchronize()    # 等待所有CUDA操作完成，确保结果的正确性
 
                     eval_out = evaluator.evaluate(post_out, data)
 

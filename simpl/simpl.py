@@ -603,7 +603,7 @@ class Simpl(nn.Module):
         lanes = self.lane_net(lanes)  # output: [N_{lane}, 128]，也就是[256, 128]
         
         # * fusion
-        actors, lanes, _ = self.fusion_net(actors, actor_idcs, lanes, lane_idcs, rpe)   # output: actors:[108, 128], lanes[256, 128]
+        actors, lanes, cls = self.fusion_net(actors, actor_idcs, lanes, lane_idcs, rpe)   # output: actors:[108, 128], lanes[256, 128]
 
         # * decoding
         # 3组数据，分别是res_cls, res_reg, res_aux
@@ -638,8 +638,8 @@ class Simpl(nn.Module):
         res_reg = out[1]
 
         # get prediction results for target vehicles only
-        reg = torch.stack([trajs[0] for trajs in res_reg], dim=0)
-        cls = torch.stack([probs[0] for probs in res_cls], dim=0)
+        reg = torch.stack([trajs[0] for trajs in res_reg], dim=0)   # [1, 6]
+        cls = torch.stack([probs[0] for probs in res_cls], dim=0)   # [1, 6, 60, 2]
 
         post_out['out_raw'] = out
         post_out['traj_pred'] = reg  # batch x n_mod x pred_len x 2
