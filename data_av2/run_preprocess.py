@@ -20,7 +20,7 @@ from av2.datasets.motion_forecasting import scenario_serialization
 #
 from av2_preprocess import ArgoPreprocAV2
 
-_FEATURES_SMALL_SIZE = 1024
+_FEATURES_SMALL_SIZE = 32768
 
 
 def parse_arguments() -> Any:
